@@ -11,7 +11,7 @@ namespace Radical_Radiation
         public int reactorRodRadius = 15;
         [Slider("Uraninite crystal rad radius", 1, 99, DefaultValue = 15, Step = 1, Format = "{0:F0}"), OnChange(nameof(UpdateRadiusDict1))]
         public int uraniniteCrystalRadius = 15;
-        [Slider("Drillable Uraninite rad radius", 1, 99, DefaultValue = 30, Step = 1, Format = "{0:F0}"), OnChange(nameof(UpdateRadiusDict1))]
+        [Slider("Drillable uraninite rad radius", 1, 99, DefaultValue = 30, Step = 1, Format = "{0:F0}"), OnChange(nameof(UpdateRadiusDict1))]
         public int drillableUraniniteRadius = 30;
         [Slider("Nuclear reactor rad radius", 1, 99, DefaultValue = 30, Step = 1, Format = "{0:F0}"), OnChange(nameof(UpdateRadiusDict1))]
         public int nuclearReactorRadius = 30;

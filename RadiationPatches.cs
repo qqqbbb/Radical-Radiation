@@ -73,6 +73,9 @@ namespace Radical_Radiation
 
         public static bool InventoryHasRad()
         {
+            if (!Inventory.main || Inventory.main._container == null)
+                return false;
+
             foreach (TechType tt in radStuff)
             {
                 if (Inventory.main._container.Contains(tt))
@@ -335,6 +338,9 @@ namespace Radical_Radiation
         {
             public static void Postfix(uGUI_RadiationWarning __instance)
             {
+                if (!Player.main)
+                    return;
+
                 bool show = radPlayerInRange.Count > 0 || InventoryHasRad();
                 if (Player.main.radiationAmount == 0f && !Main.config.showRadWarning)
                     show = false;
@@ -489,7 +495,7 @@ namespace Radical_Radiation
                 if (__instance.recipe == TechType.BaseNuclearReactor)
                 {
                     Base baseComp = __instance.GetComponentInParent<Base>();
-                    ErrorMessage.AddDebug("BaseDeconstructable Deconstruct ");
+                    //ErrorMessage.AddDebug("BaseDeconstructable Deconstruct ");
                     //if (baseComp == null)
                     //    ErrorMessage.AddDebug("baseComp = null");
                     //else if (baseComp.IsEmpty())
