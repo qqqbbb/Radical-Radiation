@@ -1,6 +1,7 @@
 ﻿
 using HarmonyLib;
 using QModManager.API.ModLoading;
+using System;
 using System.Reflection;
 using SMLHelper.V2.Handlers;
 using System.Collections.Generic;
@@ -36,5 +37,17 @@ namespace Radical_Radiation
             //modLoaded = true;
             RadiationPatches.UpdateRadiusDict();
         }
+
+        //[QModPostPatch] // runs before SMLhelper adds new techtypes
+        public static void ModCompat()
+        {
+            foreach (TechType tt in (TechType[])Enum.GetValues(typeof(TechType)))
+            {
+                Log("TechType " + tt);
+                //if (tt.ToString() == "MIUraninite") 
+            }
+        }
+
+
     }
 }

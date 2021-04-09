@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using CyclopsNuclearReactor;
 
 namespace Radical_Radiation
 { // make player drop rad items on death?
@@ -13,19 +14,35 @@ namespace Radical_Radiation
         static float radDamageTime = 0f;
         public static Dictionary<RadiatePlayerInRange, float> radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
         //public static Dictionary<TechType, float> radRange = new Dictionary<TechType, float> { { TechType.ReactorRod, Main.config.reactorRodRadius }, { TechType.DepletedReactorRod, Main.config.reactorRodRadius }, { TechType.UraniniteCrystal, Main.config.uraniniteCrystalRadius }, { TechType.DrillableUranium, Main.config.drillableUraniniteRadius }, { TechType.NuclearReactor, Main.config.nuclearReactorRadius } };
-        public static Dictionary<TechType, float> radRange = new Dictionary<TechType, float>();
+        public static Dictionary<TechType, float> radRange = new Dictionary<TechType, float>(); 
         public static HashSet<TechType> radStuff = new HashSet<TechType> { { TechType.ReactorRod }, { TechType.DepletedReactorRod }, { TechType.UraniniteCrystal } };
+        //public static HashSet<string> radStuffMods = new HashSet<string> { {"MIUraninite"} };
+
+        public static void ModCompat()
+        {
+            foreach (TechType tt in (TechType[])Enum.GetValues(typeof(TechType)))
+            {
+                //Main.Log("TechType " + tt);
+                if (tt.ToString() == "MIUraninite")
+                {
+                    radStuff.Add(tt);
+                    radRange[tt] = radRange[TechType.UraniniteCrystal];
+                }
+            }
+        }
 
         public static void UpdateRadiusDict()
         {
             if (Main.config == null)
                 return;
+            //TechType tt = TechType.uran
             //ErrorMessage.AddDebug("Update Radius Dict");
             radRange[TechType.ReactorRod] = Main.config.reactorRodRadius;
             radRange[TechType.DepletedReactorRod] = Main.config.reactorRodRadius;
             radRange[TechType.UraniniteCrystal] = Main.config.uraniniteCrystalRadius;
             radRange[TechType.DrillableUranium] = Main.config.drillableUraniniteRadius;
             radRange[TechType.NuclearReactor] = Main.config.nuclearReactorRadius;
+            radRange[TechType.BaseNuclearReactor] = Main.config.nuclearReactorRadius;
         }
 
         public static void RebuildRadDict()
@@ -177,6 +194,15 @@ namespace Radical_Radiation
                 }
             }
             return false;
+        }
+
+        [HarmonyPatch(typeof(Player), "Start")]
+        class Player_Start_patch
+        {
+            public static void Postfix(Player __instance)
+            {
+                ModCompat();
+            }
         }
 
         [HarmonyPatch(typeof(Drillable), "Start")]
@@ -375,20 +401,39 @@ namespace Radical_Radiation
             }
         }
 
-        [HarmonyPatch(typeof(Pickupable), "Awake")]
+        //[HarmonyPatch(typeof(Pickupable), "Awake")]
         class Pickupable_Awake_patch
         {
             public static void Postfix(Pickupable __instance)
             {
                 TechType techType = __instance.GetTechType();
+
+                //ErrorMessage.AddDebug(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechType());
                 if (radStuff.Contains(techType))
                 {
                     if (__instance.isPickupable) // not in container
                     {
-                        //ErrorMessage.AddDebug(__instance.gameObject.name +" Awake in inventory ");
-                        //Main.Log(__instance.gameObject.name + " Awake " );
+                        //ErrorMessage.AddDebug(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechType());
+                        //Main.Log(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechName());
                         MakeRadioactive(__instance.gameObject, true, radRange[techType]);
                     }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Pickupable), "Initialize")]
+        class Pickupable_Initialize_patch
+        {
+            public static void Postfix(Pickupable __instance)
+            {
+                TechType techType = __instance.GetTechType();
+
+                //ErrorMessage.AddDebug(__instance.gameObject.name + " Pickupable Initialize " + techType);
+                if (radStuff.Contains(techType) && __instance.isPickupable)
+                {
+                    //ErrorMessage.AddDebug(__instance.gameObject.name + " Pickupable Awake " + techType);
+                    //Main.Log(__instance.gameObject.name + " Pickupable Initialize " + __instance.GetTechName());
+                    MakeRadioactive(__instance.gameObject, true, radRange[techType]);
                 }
             }
         }
@@ -399,14 +444,20 @@ namespace Radical_Radiation
             public static void Postfix(ItemsContainer __instance, InventoryItem item)
             {
                 TechType techType = item.item.GetTechType();
+                //Main.Log("NotifyAddItem " + techType);
+                //ErrorMessage.AddDebug("NotifyAddItem " + techType);
                 if (radStuff.Contains(techType))
                 {
-                    //Main.Log(" Add " + item.item.gameObject.name + " to " + __instance.tr.gameObject.name);
-                    //ErrorMessage.AddDebug(item.item.gameObject.name+ " isPickupable " + item.item.isPickupable);
                     if (item.item.GetComponent<RadiatePlayerInRange>())
                         MakeRadioactive(item.item.gameObject, false);
 
-                    if (Inventory.main._container != __instance)
+                    CyNukeReactorMono cyNukeReactorMono = __instance.tr.gameObject.GetComponentInParent<CyNukeReactorMono>();
+                    if (cyNukeReactorMono)
+                    {
+                        //ErrorMessage.AddDebug("CyNukeReactorMono ");
+                        MakeRadioactive(__instance.tr.gameObject, true, radRange[TechType.BaseNuclearReactor]);
+                    }
+                    else if (Inventory.main._container != __instance)
                         MakeRadioactive(__instance.tr.gameObject, true, radRange[techType]);
                 }
             }
@@ -420,6 +471,7 @@ namespace Radical_Radiation
                 TechType techType = item.item.GetTechType();
                 if (radStuff.Contains(techType))
                 {
+                    //CyNukeReactorMono cyNukeReactorMono = __instance.tr.gameObject.GetComponentInParent<CyNukeReactorMono>();
                     if (Inventory.main._container != __instance)
                     {
                         int count = 0;
@@ -465,7 +517,7 @@ namespace Radical_Radiation
             public static void Postfix(BaseNuclearReactor __instance, string slot, InventoryItem item)
             {
                 Pickupable pickupable = item.item;
-                if (pickupable != null && radStuff.Contains(pickupable.GetTechType()))
+                if (pickupable && radStuff.Contains(pickupable.GetTechType()))
                 {
                     //ErrorMessage.AddDebug("Nuclear Reactor Equip rad");
                     MakeRadioactive(__instance.gameObject, true, radRange[TechType.NuclearReactor]);
@@ -561,6 +613,25 @@ namespace Radical_Radiation
 
             }
         }
+
+        //[HarmonyPatch(typeof(GhostCrafter), "Craft")]
+        class GhostCrafter_Craft_patch
+        {
+            public static void Postfix(GhostCrafter __instance, TechType techType)
+            {
+                if (techType.ToString() == "MIUraninite")
+                {
+                    //ErrorMessage.AddDebug("Craft MIUraninite" );
+                }
+
+                //Main.Log("GhostCrafter Craft " + techType);
+                if (techType == TechType.UraniniteCrystal || techType == TechType.ReactorRod)
+                {
+                    //ErrorMessage.AddDebug("Picked up UraniniteCrystal");
+                }
+            }
+        }
+
 
     }
 }
