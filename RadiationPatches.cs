@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using CyclopsNuclearReactor;
 
 namespace Radical_Radiation
 { // make player drop rad items on death?
@@ -18,16 +17,18 @@ namespace Radical_Radiation
         public static HashSet<TechType> radStuff = new HashSet<TechType> { { TechType.ReactorRod }, { TechType.DepletedReactorRod }, { TechType.UraniniteCrystal } };
         //public static HashSet<string> radStuffMods = new HashSet<string> { {"MIUraninite"} };
 
+
         public static void ModCompat()
         {
-            foreach (TechType tt in (TechType[])Enum.GetValues(typeof(TechType)))
+            TechType uranIngot = TechType.None;
+            TechTypeExtensions.FromString("MIUraninite", out uranIngot, false);
+               // TryParse does not work if techtype added by SMLhelper
+               //uraninite = (TechType)Enum.Parse(typeof(TechType), "MIUraninite");
+            if (uranIngot != TechType.None)
             {
-                //Main.Log("TechType " + tt);
-                if (tt.ToString() == "MIUraninite")
-                {
-                    radStuff.Add(tt);
-                    radRange[tt] = radRange[TechType.UraniniteCrystal];
-                }
+                radStuff.Add(uranIngot);
+                radRange[uranIngot] = radRange[TechType.UraniniteCrystal];
+                //Main.Log("uraninite " + uranIngot);
             }
         }
 
@@ -202,6 +203,8 @@ namespace Radical_Radiation
             public static void Postfix(Player __instance)
             {
                 ModCompat();
+                //foreach (TechType tt in radStuff)
+                //    Main.Log("radStuff  " + tt);
             }
         }
 
@@ -450,11 +453,10 @@ namespace Radical_Radiation
                 {
                     if (item.item.GetComponent<RadiatePlayerInRange>())
                         MakeRadioactive(item.item.gameObject, false);
-
-                    CyNukeReactorMono cyNukeReactorMono = __instance.tr.gameObject.GetComponentInParent<CyNukeReactorMono>();
-                    if (cyNukeReactorMono)
+                    //CyNukeReactorMono cyNukeReactorMono = __instance.tr.gameObject.GetComponentInParent<CyNukeReactorMono>();
+                    if (__instance.tr.parent.gameObject.GetComponent("CyNukeReactorMono"))
                     {
-                        //ErrorMessage.AddDebug("CyNukeReactorMono ");
+                        //ErrorMessage.AddDebug("Cyclops Nuke Reactor !!!");
                         MakeRadioactive(__instance.tr.gameObject, true, radRange[TechType.BaseNuclearReactor]);
                     }
                     else if (Inventory.main._container != __instance)
