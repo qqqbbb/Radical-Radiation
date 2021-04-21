@@ -4,6 +4,7 @@ using QModManager.API.ModLoading;
 using System;
 using System.Reflection;
 using SMLHelper.V2.Handlers;
+using SMLHelper.V2.Crafting;
 using System.Collections.Generic;
 
 namespace Radical_Radiation
@@ -13,6 +14,7 @@ namespace Radical_Radiation
     {
         internal static Config config { get; } = OptionsPanelHandler.RegisterModOptions<Config>();
         //public static bool modLoaded = false;
+
         public static void Log(string str, QModManager.Utility.Logger.Level lvl = QModManager.Utility.Logger.Level.Info)
         {
             QModManager.Utility.Logger.Log(lvl, str);
@@ -24,7 +26,11 @@ namespace Radical_Radiation
             public static void Postfix(IngameMenu __instance, bool quitToDesktop)
             {
                 if (!quitToDesktop)
-                    RadiationPatches.radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
+                {
+                    RadPatches.radLockerOpen = false;
+                    RadPatches.radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
+                }
+   
             }
         }
 
@@ -35,18 +41,13 @@ namespace Radical_Radiation
             Assembly assembly = Assembly.GetExecutingAssembly();
             new Harmony($"qqqbbb_{assembly.GetName().Name}").PatchAll(assembly);
             //modLoaded = true;
-            RadiationPatches.UpdateRadiusDict();
+            RadPatches.UpdateRadiusDict();
+            new RadLocker().Patch();
+
+            TechTypeExtensions.FromString("RadRadLocker", out RadPatches.radLocker, false);
+
         }
 
-        //[QModPostPatch] // runs before SMLhelper adds new techtypes
-        public static void ModCompat()
-        {
-            foreach (TechType tt in (TechType[])Enum.GetValues(typeof(TechType)))
-            {
-                Log("TechType " + tt);
-                //if (tt.ToString() == "MIUraninite") 
-            }
-        }
 
 
     }

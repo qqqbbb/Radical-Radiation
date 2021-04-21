@@ -57,10 +57,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RadLocker.cs" />
     <Compile Include="Main.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="RadiationPatches.cs" />
+    <Compile Include="RadPatches.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Config.cs" />
