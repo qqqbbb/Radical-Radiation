@@ -18,7 +18,7 @@ namespace Radical_Radiation
         [Slider("Nuclear reactor rad radius", 0, 99, DefaultValue = 30, Step = 1, Format = "{0:F0}"), OnChange(nameof(UpdateRadiusDict))]
         public int nuclearReactorRadius = 30;
         [Slider("Reactor rod crafting time multiplier", 1, 1000, DefaultValue = 1, Step = 1, Format = "{0:F0}", Tooltip = "Default crafting time is 9 seconds.")]
-        public float rodCraftTimeMult;
+        public int rodCraftTimeMult = 1;
         [Toggle("Persistent radiation warning", Tooltip = "Radiation warning will be on even when you are protected from radiation")]
         public bool showRadWarning = false;
         [Toggle("Persistent radiation sound", Tooltip = "Radiation sound will be on even when you are protected from radiation")]

@@ -603,7 +603,7 @@ namespace Radical_Radiation
 
         [HarmonyPatch(typeof(Crafter), "CrafterOnDone")]
         class Crafter_CrafterOnDone_patch
-        {
+        { // Pickupable spawns when you pick it up not when crafting finishes
             public static void Postfix(Crafter __instance)
             {
                 TechType techType = __instance.logic.craftingTechType;
