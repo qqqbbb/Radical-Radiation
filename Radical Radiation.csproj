@@ -55,10 +55,15 @@
     <Reference Include="SMLHelper">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\QMods\SMLHelper\SMLHelper.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="RadLocker.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="Testing.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="RadPatches.cs" />

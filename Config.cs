@@ -19,6 +19,12 @@ namespace Radical_Radiation
         public int nuclearReactorRadius = 30;
         [Slider("Reactor rod crafting time multiplier", 1, 1000, DefaultValue = 1, Step = 1, Format = "{0:F0}", Tooltip = "Default crafting time is 9 seconds.")]
         public int rodCraftTimeMult = 1;
+        [Slider("Seamoth rad protection %", 0, 100, DefaultValue = 0, Step = 1, Format = "{0:F0}", Tooltip = "Default value is 0")]
+        public int SeamothRadProtect = 0;
+        [Slider("Prawn suit rad protection %", 0, 100, DefaultValue = 100, Step = 1, Format = "{0:F0}", Tooltip = "Default value is 100")]
+        public int ExosuitRadProtect = 100;
+        [Slider("Cyclops and base rad protection %", 0, 100, DefaultValue = 0, Step = 1, Format = "{0:F0}", Tooltip = "Default value is 0")]
+        public int cyclopsRadProtect = 0;
         [Toggle("Persistent radiation warning", Tooltip = "Radiation warning will be on even when you are protected from radiation")]
         public bool showRadWarning = false;
         [Toggle("Persistent radiation sound", Tooltip = "Radiation sound will be on even when you are protected from radiation")]
@@ -34,7 +40,7 @@ namespace Radical_Radiation
         public static void UpdateRadiusDict()
         {
             RadPatches.UpdateRadiusDict();
-           // ErrorMessage.AddDebug("Update Radius Dict 1");
+           // AddDebug("Update Radius Dict 1");
            //Main.Log("Update Radius Dict 1");
            //RadiationPatches.radRange.Add(TechType.ReactorRod, config.reactorRodRadius);
            //RadiationPatches.radRange.Add(TechType.DepletedReactorRod, config.reactorRodRadius);
