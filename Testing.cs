@@ -16,13 +16,14 @@ using static ErrorMessage;
 namespace Radical_Radiation
 {
     class Testing
-    {
+    {            
         //[HarmonyPatch(typeof(Player), "Update")]
         class Player_Update_Patch
         {
             static void Postfix(Player __instance)
             {
-                Player.main.oxygenMgr.AddOxygen(115f);
+                AddDebug("rad " + Player.main.radiationAmount.ToString("0.0"));
+                //AddDebug("health " + Player.main.liveMixin.health.ToString("0"));
                 //AddDebug("health " + (int)Player.main.liveMixin.health);
                 //AddDebug("timePassedAsFloat " + DayNightCycle.main.timePassedAsFloat);
                 if (Input.GetKey(KeyCode.B))
@@ -47,12 +48,18 @@ namespace Radical_Radiation
 
                 if (Input.GetKey(KeyCode.C))
                 {
-                    Survival survival = Player.main.GetComponent<Survival>();
+                    Vehicle vehicle = Player.main.currentMountedVehicle;
+                    if (vehicle)
+                    {
+                        RadPatches.IsProtected(vehicle);
+                    }
+ 
+                    //Survival survival = Player.main.GetComponent<Survival>();
 
-                    if (Input.GetKey(KeyCode.LeftShift))
-                        survival.water++;
-                    else
-                        survival.food++;
+                    //if (Input.GetKey(KeyCode.LeftShift))
+                    //    survival.water++;
+                    //else
+                    //    survival.food++;
                 }
 
                 if (Input.GetKey(KeyCode.X))
@@ -65,25 +72,17 @@ namespace Radical_Radiation
                 }
                 if (Input.GetKey(KeyCode.Z))
                 {
-                    if (Player.main._currentSub)
-                    {
-                        AddDebug("_currentSub " + Player.main._currentSub.gameObject.name);
-                    }
-                    else
-                        AddDebug("OUTSIDE ");
-
                     GUIHand guiHand = __instance.GetComponent<GUIHand>();
                     Targeting.GetTarget(Player.main.gameObject, 5f, out GameObject target, out float targetDist);
                     if (target)
                     {
-  
 
                     }
                     if (guiHand.activeTarget)
                     {
-                        //AddDebug("activeTarget " + guiHand.activeTarget.name);
-                        //AddDebug("activeTarget parent " + guiHand.activeTarget.transform.parent.name);
-                        //AddDebug("TechType " + CraftData.GetTechType(guiHand.activeTarget));
+                        AddDebug("activeTarget " + guiHand.activeTarget.name);
+                        AddDebug("activeTarget parent " + guiHand.activeTarget.transform.parent.name);
+                        AddDebug("TechType " + CraftData.GetTechType(guiHand.activeTarget));
                     }
                     if (Input.GetAxis("Mouse ScrollWheel") > 0f)
                     {

@@ -10,7 +10,7 @@ namespace Radical_Radiation
 {
     class RadLocker : Buildable
     {
-        public RadLocker() : base("RadRadLocker", "Lead Locker", "Locker insulated from radiation.") { }
+        public RadLocker() : base("RadRadLocker", Main.config.lockerName, Main.config.lockerDesc) { }
 
         public override TechGroup GroupForPDA => TechGroup.InteriorModules;
 
@@ -25,11 +25,17 @@ namespace Radical_Radiation
             GameObject parent = UnityEngine.Object.Instantiate<GameObject>(CraftData.GetPrefabForTechType(TechType.SmallLocker, true));
             Vector3 scale = parent.transform.localScale;
             parent.transform.localScale = new Vector3(scale.x * 1.2f, scale.y * 1.2f, scale.z * 1.2f);
-            //var fbColor = parent.GetAllComponentsInChildren<SkinnedMeshRenderer>();
-            //foreach (var fabricatorColor in fbColor)
-            //{
-            //    fabricatorColor.material.color
-            //}
+            MeshRenderer[] smrs = parent.GetAllComponentsInChildren<MeshRenderer>();
+            foreach (MeshRenderer smr in smrs)
+            {
+                smr.material.color = new Color(Main.config.radLockerRed, Main.config.radLockerRed, Main.config.radLockerRed, 1f);
+            }
+            //uGUI_SignInput si = parent.GetComponent<uGUI_SignInput>();
+            //if (si) // null
+            //    si.stringDefaultLabel = Main.config.lockerName;
+            //else
+            //    Main.Log("rad locker no uGUI_SignInput");
+
             return parent;
         }
 

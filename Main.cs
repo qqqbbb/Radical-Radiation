@@ -6,14 +6,13 @@ using System.Reflection;
 using SMLHelper.V2.Handlers;
 using SMLHelper.V2.Crafting;
 using System.Collections.Generic;
-// to fix: reactor rod wih radius 0 in inventory still hurts 
+
 namespace Radical_Radiation
 {
     [QModCore]
     public class Main
     {
         public static Config config { get; } = OptionsPanelHandler.RegisterModOptions<Config>();
-        //public static bool modLoaded = false;
 
         public static void Log(string str, QModManager.Utility.Logger.Level lvl = QModManager.Utility.Logger.Level.Info)
         {
@@ -29,6 +28,7 @@ namespace Radical_Radiation
                 {
                     RadPatches.radLockerOpen = false;
                     RadPatches.subLocker = null;
+                    RadPatches.seamothStorage = null;
                     RadPatches.radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
                 }
    
@@ -44,8 +44,13 @@ namespace Radical_Radiation
             //modLoaded = true;
             RadPatches.UpdateRadiusDict();
             new RadLocker().Patch();
-
+            new SeamothRadModule().Patch();
+            new CyclopsRadModule().Patch();
             TechTypeExtensions.FromString("RadRadLocker", out RadPatches.radLocker, false);
+            TechTypeExtensions.FromString("SeamothRadModule", out RadPatches.radModuleSeamoth, false);
+            TechTypeExtensions.FromString("CyclopsRadModule", out RadPatches.radModuleCyclops, false);
+                //Log("RadRadLocker " + RadPatches.radLocker.ToString());
+            //Log("SeamothRadModule " + RadPatches.radModuleSeamoth.ToString());
 
         }
 
