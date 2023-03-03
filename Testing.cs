@@ -1,6 +1,5 @@
 ﻿
 using HarmonyLib;
-using QModManager.API.ModLoading;
 using System.Reflection;
 using System;
 using SMLHelper.V2.Handlers;
@@ -26,6 +25,7 @@ namespace Radical_Radiation
                 //AddDebug("health " + Player.main.liveMixin.health.ToString("0"));
                 //AddDebug("health " + (int)Player.main.liveMixin.health);
                 //AddDebug("timePassedAsFloat " + DayNightCycle.main.timePassedAsFloat);
+                return;
                 if (Input.GetKey(KeyCode.B))
                 {
                     //AddDebug("currentSlot " + Main.config.escapePodSmokeOut[SaveLoadManager.main.currentSlot]);

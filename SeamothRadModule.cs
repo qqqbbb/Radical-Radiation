@@ -18,8 +18,8 @@ namespace Radical_Radiation
     {
         public SeamothRadModule() : base(
             classId: "SeamothRadModule",
-            friendlyName: "Radiation protection module",
-            description: "Protects seamoth or prawn suit driver from radiation.")
+            friendlyName: Main.config.seamothRadModuleName,
+            description: Main.config.seamothRadModuleDesc)
         {
             //OnStartedPatching += () => CraftTreeHandler.AddTabNode(CraftTree.Type.Workbench, "SeamothRadlModule", "Seamoth radiation protection module", GetItemSprite());
         }
@@ -71,6 +71,7 @@ namespace Radical_Radiation
             string executingLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string fileLocation = Path.Combine(executingLocation, "Radmodule.png");
             return ImageUtils.LoadSpriteFromFile(fileLocation);
+            //AssetsHelper.Assets.LoadAsset<UnityEngine.Sprite>("CyclopsDockingHatchIconG"));
         }
     }
 }

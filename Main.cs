@@ -1,23 +1,24 @@
 ﻿
 using HarmonyLib;
-using QModManager.API.ModLoading;
 using System;
 using System.Reflection;
 using SMLHelper.V2.Handlers;
 using SMLHelper.V2.Crafting;
 using System.Collections.Generic;
+using BepInEx;
 
 namespace Radical_Radiation
 {
-    [QModCore]
-    public class Main
+    [BepInPlugin(GUID, MODNAME, VERSION)]
+    public class Main : BaseUnityPlugin
     {
+        private const string
+            MODNAME = "Radical radiation",
+            GUID = "qqqbbb.subnautica.radicalRadiation",
+            VERSION = "2.0";
+
         public static Config config { get; } = OptionsPanelHandler.RegisterModOptions<Config>();
 
-        public static void Log(string str, QModManager.Utility.Logger.Level lvl = QModManager.Utility.Logger.Level.Info)
-        {
-            QModManager.Utility.Logger.Log(lvl, str);
-        }
 
         [HarmonyPatch(typeof(IngameMenu), "QuitGameAsync")]
         internal class IngameMenu_QuitGameAsync_Patch
@@ -35,8 +36,7 @@ namespace Radical_Radiation
             }
         }
 
-        [QModPatch]
-        public static void Load()
+        private void Start()
         {
             config.Load();
             Assembly assembly = Assembly.GetExecutingAssembly();

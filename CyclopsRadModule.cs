@@ -9,6 +9,7 @@ namespace Radical_Radiation
     using SMLHelper.V2.Crafting;
     using SMLHelper.V2.Handlers;
     using SMLHelper.V2.Utility;
+    using System.Collections;
     using System.Collections.Generic;
     using UnityEngine;
     using System.IO;
@@ -18,8 +19,8 @@ namespace Radical_Radiation
     {
         public CyclopsRadModule() : base(
             classId: "CyclopsRadModule",
-            friendlyName: "Radiation protection module",
-            description: "Protects cyclops from radiation.")
+            friendlyName: Main.config.cyclopsRadModuleName,
+            description: Main.config.cyclopsRadModuleDesc)
         {
         }
 
@@ -35,9 +36,14 @@ namespace Radical_Radiation
 
         public override QuickSlotType QuickSlotType => QuickSlotType.Passive;
 
-        public override GameObject GetGameObject()
+        public override IEnumerator GetGameObjectAsync(IOut<GameObject> gameObject)
         {
-            return  UnityEngine.Object.Instantiate<GameObject>(CraftData.GetPrefabForTechType(TechType.CyclopsHullModule1, true));
+            CoroutineTask<GameObject> task = CraftData.GetPrefabForTechTypeAsync(TechType.CyclopsHullModule1);
+            yield return task;
+            GameObject originalPrefab = task.GetResult();
+            GameObject resultPrefab = UnityEngine.Object.Instantiate(originalPrefab);
+            gameObject.Set(resultPrefab);
+            //return  UnityEngine.Object.Instantiate<GameObject>(CraftData.GetPrefabForTechType(TechType.CyclopsHullModule1, true));
         }
 
         protected override TechData GetBlueprintRecipe()

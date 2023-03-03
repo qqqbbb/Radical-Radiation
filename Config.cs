@@ -40,6 +40,10 @@ namespace Radical_Radiation
         public float radLockerBlue = .33f;
         public string lockerName = "Lead Locker";
         public string lockerDesc = "Locker insulated from radiation.";
+        public string cyclopsRadModuleName = "Radiation protection module";
+        public string cyclopsRadModuleDesc = "Protects cyclops from radiation.";
+        public string seamothRadModuleName = "Radiation protection module";
+        public string seamothRadModuleDesc = "Protects seamoth or prawn suit driver from radiation.";
 
         public List<Ingredient> radLockerIngredients = new List<Ingredient>()
         {
