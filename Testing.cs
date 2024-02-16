@@ -2,7 +2,6 @@
 using HarmonyLib;
 using System.Reflection;
 using System;
-using SMLHelper.V2.Handlers;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,11 +10,14 @@ using FMOD.Studio;
 using FMODUnity;
 using System.Text;
 using static ErrorMessage;
+using System.Runtime.CompilerServices;
 
 namespace Radical_Radiation
 {
     class Testing
-    {            
+    {
+        //public static ConditionalWeakTable<GameObject, Rigidbody> objectsRBs = new ConditionalWeakTable<GameObject, Rigidbody>();
+
         //[HarmonyPatch(typeof(Player), "Update")]
         class Player_Update_Patch
         {
@@ -25,7 +27,10 @@ namespace Radical_Radiation
                 //AddDebug("health " + Player.main.liveMixin.health.ToString("0"));
                 //AddDebug("health " + (int)Player.main.liveMixin.health);
                 //AddDebug("timePassedAsFloat " + DayNightCycle.main.timePassedAsFloat);
-                return;
+                //foreach (var item in objectsRBs)
+                {
+
+                }
                 if (Input.GetKey(KeyCode.B))
                 {
                     //AddDebug("currentSlot " + Main.config.escapePodSmokeOut[SaveLoadManager.main.currentSlot]);
@@ -37,14 +42,21 @@ namespace Radical_Radiation
                     //    AddDebug("GetInMechMode");
                     //else if (Player.main.inSeamoth)
                     //    AddDebug("inSeamoth");
+
+                
+
+
+                    TechType ttt = (TechType)Enum.Parse(typeof(TechType), "RadLocker");
+                    AddDebug("ttt " + ttt);
                     int x = Mathf.RoundToInt(Player.main.transform.position.x);
                     int y = Mathf.RoundToInt(Player.main.transform.position.y);
                     int z = Mathf.RoundToInt(Player.main.transform.position.z);
-                    AddDebug(x + " " + y + " " + z);
-                    AddDebug("" + Player.main.GetBiomeString());
+                    //AddDebug(x + " " + y + " " + z);
+                    //AddDebug("" + Player.main.GetBiomeString());
                     //Inventory.main.container.Resize(8,8);   GetPlayerBiome()
                     //HandReticle.main.SetInteractText(nameof(startingFood) + " " + dict[i]);
                 }
+                return;
 
                 if (Input.GetKey(KeyCode.C))
                 {

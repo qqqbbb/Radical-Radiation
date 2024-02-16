@@ -1,56 +1,57 @@
 ﻿using HarmonyLib;
+using Nautilus.Assets;
+using Nautilus.Assets.Gadgets;
+using Nautilus.Assets.PrefabTemplates;
+using Nautilus.Crafting;
+using Nautilus.Utility;
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
-using SMLHelper.V2.Assets;
-using SMLHelper.V2.Crafting;
-using UWE;
+
 
 namespace Radical_Radiation
 {
-    class RadLocker : Buildable
+    public static class RadLocker 
     {
-        public RadLocker() : base("RadRadLocker", Main.config.lockerName, Main.config.lockerDesc) { }
-
-        public override TechGroup GroupForPDA => TechGroup.InteriorModules;
-
-        public override TechCategory CategoryForPDA => TechCategory.InteriorModule;
-
-        //public override TechType RequiredForUnlock => TechType.BaseNuclearReactor;
-
-        protected override Atlas.Sprite GetItemSprite() => SpriteManager.Get(TechType.SmallLocker);
-
-        public override IEnumerator GetGameObjectAsync(IOut<GameObject> gameObject)
+        public static void RegisterRadLocker()
         {
-            CoroutineTask<GameObject> task = CraftData.GetPrefabForTechTypeAsync(TechType.SmallLocker);
-            yield return task;
-            GameObject originalPrefab = task.GetResult();
-            GameObject resultPrefab = UnityEngine.Object.Instantiate(originalPrefab);
-            Vector3 scale = resultPrefab.transform.localScale;
-            resultPrefab.transform.localScale = new Vector3(scale.x * 1.2f, scale.y * 1.2f, scale.z * 1.2f);
-            MeshRenderer[] smrs = resultPrefab.GetAllComponentsInChildren<MeshRenderer>();
-            foreach (MeshRenderer smr in smrs)
-            {
-                smr.material.color = new Color(Main.config.radLockerRed, Main.config.radLockerRed, Main.config.radLockerRed, 1f);
-            }
-            //uGUI_SignInput si = parent.GetComponent<uGUI_SignInput>();
-            //if (si) // null
-            //    si.stringDefaultLabel = Main.config.lockerName;
-            //else
-            //    Main.Log("rad locker no uGUI_SignInput");
-            gameObject.Set(resultPrefab);
+            PrefabInfo prefabInfo = PrefabInfo.WithTechType("RadLocker", Main.config.lockerName, Main.config.lockerDesc);
+            //prefabInfo.WithIcon(SpriteManager.Get(TechType.SmallLocker));
+            prefabInfo.WithIcon(GetSprite());
+            CustomPrefab customPrefab = new CustomPrefab(prefabInfo);
+            CloneTemplate cloneTemplate = new CloneTemplate(customPrefab.Info, TechType.SmallLocker);
+            customPrefab.SetGameObject( cloneTemplate);
+            customPrefab.SetUnlock(TechType.UraniniteCrystal);
+            cloneTemplate.ModifyPrefab += ModifyPrefab;
+            GadgetExtensions.SetPdaGroupCategory(customPrefab, TechGroup.InteriorModules, TechCategory.InteriorModule);
+            RecipeData recipeData = new RecipeData();
+            recipeData.craftAmount = 1;
+            recipeData.Ingredients = Main.config.radLockerIngredients;
+            GadgetExtensions.SetRecipe(customPrefab, recipeData);
+            customPrefab.Register();
+            //Main.logger.LogMessage("Registered rad locker"); 
         }
 
-        protected override TechData GetBlueprintRecipe()
+        private static void ModifyPrefab(GameObject obj)
         {
-            TechData recipe = new TechData()
+            Vector3 scale = obj.transform.localScale;
+            obj.transform.localScale = new Vector3(scale.x * 1.2f, scale.y * 1.2f, scale.z * 1.2f);
+            MeshRenderer[] mrs = obj.GetAllComponentsInChildren<MeshRenderer>();
+            foreach (MeshRenderer mr in mrs)
             {
-                craftAmount = 1,
-                Ingredients = Main.config.radLockerIngredients
-            };
-            return recipe;
+                mr.material.color = new Color(.33f, .33f, .33f, 1f);
+            }
+        }
+
+        public static Atlas.Sprite GetSprite()
+        {
+            string executingLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string fileLocation = Path.Combine(executingLocation, "LeadLocker.png");
+            return ImageUtils.LoadSpriteFromFile(fileLocation);
         }
 
     }

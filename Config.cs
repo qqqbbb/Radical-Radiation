@@ -1,7 +1,11 @@
-﻿using SMLHelper.V2.Json;
-using SMLHelper.V2.Options.Attributes;
+﻿using Nautilus.Json;
+using Nautilus.Options.Attributes;
 using System.Collections.Generic;
-using SMLHelper.V2.Crafting;
+using UnityEngine;
+using Nautilus.Commands;
+using Nautilus.Handlers;
+using Nautilus.Options;
+using System.ComponentModel;
 
 namespace Radical_Radiation
 {
@@ -32,35 +36,35 @@ namespace Radical_Radiation
         public bool radSound = false;
         [Toggle("Radiation screen effects", Tooltip = "")]
         public bool screenFX = true;
-        [Slider("Lead Locker color: red", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have to reload your game after changing this")]
-        public float radLockerRed = .33f;
-        [Slider("Lead Locker color: green", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have to reload your game after changing this")]
-        public float radLockerGreen = .33f;
-        [Slider("Lead Locker color: blue", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have to reload your game after changing this")]
-        public float radLockerBlue = .33f;
+        //[Slider("Lead Locker color: red", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have quit to desktop after changing this")]
+        //public float radLockerRed = .33f;
+        //[Slider("Lead Locker color: green", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have quit to desktop after changing this")]
+        //public float radLockerGreen = .33f;
+        //[Slider("Lead Locker color: blue", 0f, 1f, DefaultValue = .33f, Step = .01f, Format = "{0:R0}", Tooltip = "You have quit to desktop after changing this")]
+        //public float radLockerBlue = .33f;
         public string lockerName = "Lead Locker";
         public string lockerDesc = "Locker insulated from radiation.";
         public string cyclopsRadModuleName = "Radiation protection module";
         public string cyclopsRadModuleDesc = "Protects cyclops from radiation.";
         public string seamothRadModuleName = "Radiation protection module";
-        public string seamothRadModuleDesc = "Protects seamoth or prawn suit driver from radiation.";
+        public string seamothRadModuleDesc = "Protects seamoth or prawn suit pilot from radiation.";
 
-        public List<Ingredient> radLockerIngredients = new List<Ingredient>()
+        public List<CraftData.Ingredient> radLockerIngredients = new List<CraftData.Ingredient>()
         {
-            new Ingredient(TechType.Titanium, 2),
-            new Ingredient(TechType.Lead, 2)
+            new CraftData.Ingredient(TechType.Titanium, 2),
+            new CraftData.Ingredient(TechType.Lead, 2)
         };
 
-        public List<Ingredient> radModuleSeamoth = new List<Ingredient>()
+        public List<CraftData.Ingredient> radModuleSeamoth = new List<CraftData.Ingredient>()
         {
-            new Ingredient(TechType.Titanium, 3),
-            new Ingredient(TechType.Lead, 3)
+            new CraftData.Ingredient(TechType.Titanium, 3),
+            new CraftData.Ingredient(TechType.Lead, 3)
         };
 
-        public List<Ingredient> radModuleCyclops = new List<Ingredient>()
+        public List<CraftData.Ingredient> radModuleCyclops = new List<CraftData.Ingredient>()
         {
-            new Ingredient(TechType.Titanium, 4),
-            new Ingredient(TechType.Lead, 4)
+            new CraftData.Ingredient(TechType.Titanium, 4),
+            new CraftData.Ingredient(TechType.Lead, 4)
         };
 
         public static void UpdateRadiusDict()

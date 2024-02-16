@@ -2,8 +2,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using FMOD.Studio;
 using static ErrorMessage;
+using System.Linq;
+
 
 namespace Radical_Radiation
 { 
@@ -12,25 +13,53 @@ namespace Radical_Radiation
         static float radiateInterval = .2f;
         static float damageInterval = 2f;
         static float radDamageTime = 0f;
-        public static Dictionary<RadiatePlayerInRange, float> radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
-        public static Dictionary<TechType, float> radRange = new Dictionary<TechType, float>(); 
-        public static HashSet<TechType> radStuff = new HashSet<TechType> { { TechType.ReactorRod }, { TechType.DepletedReactorRod }, { TechType.UraniniteCrystal } };
+        static int defaulrRadItemRadius = 15;
+        static int defaulrRadRadius = 30;
+        //public static Dictionary<RadiatePlayerInRange, float> radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
+        public static RadiatePlayerInRange closestRadObject;
+        public static Dictionary<TechType, int> radRange = new Dictionary<TechType, int>(); 
         public static TechType radLocker = TechType.None;
         public static TechType radModuleSeamoth = TechType.None;
         public static TechType radModuleCyclops = TechType.None;
         public static bool radLockerOpen = false;
-        public static GameObject subLocker;
-        public static GameObject seamothStorage;
+        //public static HashSet<GameObject> goToMakeRad = new HashSet<GameObject>();
+        public static Dictionary<string, string> cyclopsCont = new Dictionary<string, string> {{ "Locker01StorageRoot", "submarine_locker_01_01" }, { "Locker02StorageRoot", "submarine_locker_01_02" }, { "Locker03StorageRoot", "submarine_locker_01_03" }, { "Locker04StorageRoot", "submarine_locker_01_04" }, { "Locker05StorageRoot", "submarine_locker_01_05" } };
+        public static Dictionary<RadiatePlayerInRange, SubRoot> radObjectSub = new Dictionary<RadiatePlayerInRange, SubRoot>();
+
+        public static bool Approximately(float a, float b, float tolerance = 0.000001f)
+        {
+            return (Mathf.Abs(a - b) < tolerance);
+        }
+
+        public static GameObject GetEntityRoot(GameObject go)
+        { // UWE.Utils.GetEntityRoot returns null
+            PrefabIdentifier prefabIdentifier = go.GetComponent<PrefabIdentifier>();
+            if (prefabIdentifier == null)
+                prefabIdentifier = go.GetComponentInParent<PrefabIdentifier>();
+
+            return prefabIdentifier != null ? prefabIdentifier.gameObject : go;
+        }
+
+        public static GameObject GeParentEntityRoot(GameObject go)
+        {
+            if (go.transform.parent == null)
+                return null;
+                          
+            PrefabIdentifier prefabIdentifier = go.GetComponent<PrefabIdentifier>();
+            if (prefabIdentifier == null)
+                prefabIdentifier = go.GetComponentInParent<PrefabIdentifier>();
+
+            return prefabIdentifier != null ? prefabIdentifier.gameObject : go;
+        }
 
         public static void ModCompat()
         {
             TechType uranIngot = TechType.None;
             TechTypeExtensions.FromString("MIUraninite", out uranIngot, false);
-               // TryParse does not work if techtype added by SMLhelper
                //uraninite = (TechType)Enum.Parse(typeof(TechType), "MIUraninite");
             if (uranIngot != TechType.None)
             {
-                radStuff.Add(uranIngot);
+                //radStuff.Add(uranIngot);
                 radRange[uranIngot] = radRange[TechType.UraniniteCrystal];
                 //Main.Log("uraninite " + uranIngot);
             }
@@ -46,52 +75,8 @@ namespace Radical_Radiation
             radRange[TechType.DepletedReactorRod] = Main.config.reactorRodRadius;
             radRange[TechType.UraniniteCrystal] = Main.config.uraniniteCrystalRadius;
             radRange[TechType.DrillableUranium] = Main.config.drillableUraniniteRadius;
-            radRange[TechType.NuclearReactor] = Main.config.nuclearReactorRadius;
             radRange[TechType.BaseNuclearReactor] = Main.config.nuclearReactorRadius;
-        }
-
-        public static void RebuildRadDict()
-        {
-            //AddDebug("Rebuild Rad Dict");
-            Dictionary<RadiatePlayerInRange, float> newDict = new Dictionary<RadiatePlayerInRange, float>();
-            foreach (var keyValuePair in radPlayerInRange)
-            {
-                if (keyValuePair.Key != null)
-                    newDict.Add(keyValuePair.Key, keyValuePair.Value);
-            }
-            radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>(newDict);
-        }
-
-        public static bool IsClosestToPlayer(RadiatePlayerInRange instance)
-        {
-            //AddDebug("IsClosestToPlayer " + instance.name + " " + radPlayerInRange.ContainsKey(instance));
-            if (!radPlayerInRange.ContainsKey(instance))
-                return false;
-
-            bool rebuildDict = false;
-            float closest = float.PositiveInfinity;
-            RadiatePlayerInRange closestInstance = null;
-
-            foreach (var keyValuePair in radPlayerInRange)
-            {
-                if (keyValuePair.Key == null)
-                    rebuildDict = true;
-                else
-                {
-                    if (keyValuePair.Value < closest)
-                    {
-                        closestInstance = keyValuePair.Key;
-                        closest = keyValuePair.Value;
-                    }
-                }
-            }
-            if (rebuildDict)
-                RebuildRadDict();
-
-            if (closestInstance.Equals(instance))
-                return true;
-
-            return false;
+            radRange[TechType.Locker] = Main.config.uraniniteCrystalRadius > Main.config.reactorRodRadius ? Main.config.uraniniteCrystalRadius : Main.config.reactorRodRadius;
         }
 
         public static bool InventoryHasRad()
@@ -102,58 +87,115 @@ namespace Radical_Radiation
             if (radLockerOpen)
                 return true;
 
-            foreach (TechType tt in radStuff)
+            //foreach (var pair in radRange)
             {
-                if (Inventory.main._container.Contains(tt) && radRange[tt] > 0)
+                if (Inventory.main._container.Contains(TechType.UraniniteCrystal) && radRange[TechType.UraniniteCrystal] > 0)
+                    return true;
+                else if (Inventory.main._container.Contains(TechType.ReactorRod) && radRange[TechType.ReactorRod] > 0)
+                    return true;
+                else if (Inventory.main._container.Contains(TechType.DepletedReactorRod) && radRange[TechType.DepletedReactorRod] > 0)
                     return true;
             }
             return false;
         }
 
-        public static void MakeRadioactive(GameObject go, bool active, float radius = 0f)
+        public static IEnumerator<GameObject> MakeRadCR(GameObject go)
         {
-            //AddDebug(" parent  " + go.transform.parent.name);
-            //AddDebug(" parent.parent  " + go.transform.parent.parent.name);
-            //AddDebug(go.name + " MakeRadioActive " + active);
-            //if (active && radius == 0f)
-            //    return;
-            if (!WaitScreen.IsWaiting && !seamothStorage && !go.GetComponent<CyclopsLocker>())
+            //int waitFrames = 0;
+            while (WaitScreen.IsWaiting)
+                yield return null;
+
+            while (go.transform.parent == null)
             {
-                //SeaMoth seaMoth = go.FindAncestor<SeaMoth>();
-                //if (seaMoth)
-                //{
-                //    AddDebug("MakeRadioActive SeaMoth");
-                    //go = seaMoth.gameObject;
-                //}
-                //else
-                {
-                    PrefabIdentifier prefabIdentifier = go.FindAncestor<PrefabIdentifier>();
-                    if (prefabIdentifier)
-                        go = prefabIdentifier.gameObject;
-                }
+                //waitFrames++;
+                yield return null;
             }
-            //AddDebug("MakeRadioActive " + go.name + " " + active);
+            //AddDebug("MakeRad waitFrames " + waitFrames);
+            MakeRad(go);
+        }
+
+        public static void MakeRad(GameObject go)
+        {
+            if (!go.activeSelf)
+                return;
+
+            if (!go.name.StartsWith("submarine_locker_"))
+                go = GetEntityRoot(go);
+            
+            //Main.logger.LogMessage("MakeRad " + go.name + " parent " + go.transform.parent.name);
+            TechType techType = CraftData.GetTechType(go);
+            if (techType == TechType.None)
+            {
+                if (go.GetComponent<BaseNuclearReactor>())
+                    techType = TechType.BaseNuclearReactor;
+            }
+            if (techType == TechType.Cyclops || techType == TechType.SmallLocker || techType == TechType.Exosuit || techType == TechType.Seamoth || techType == TechType.SmallStorage)
+            {
+                techType = TechType.Locker;
+            }
+            //if (go.transform.parent == null)
+            //    AddDebug("MakeRad " + go.name + " no parent !!!");
+            //else
+            //    AddDebug("MakeRad " + go.name + " TT " + techType);
+
+            int radius;
+            if (radRange.ContainsKey(techType))
+                radius = radRange[techType];
+            else
+            {
+                if (go.GetComponent<Pickupable>())
+                    radius = defaulrRadItemRadius;
+                else
+                    radius = defaulrRadRadius;
+            }
             PlayerDistanceTracker pdt = go.EnsureComponent<PlayerDistanceTracker>();
-            pdt.enabled = active;
+            pdt.enabled = true;
             pdt.maxDistance = radius;
             RadiatePlayerInRange rpir = go.EnsureComponent<RadiatePlayerInRange>();
-
-            if (!active && rpir)
+            SubRoot subRoot = go.GetComponentInParent<SubRoot>();
+            if (subRoot)
             {
-                bool removed = radPlayerInRange.Remove(rpir);
-                //Main.Log(go.name + " MakeRadioActive remove  radiatePlayerInRange " + removed);
+                radObjectSub[rpir] = subRoot;
+                //AddDebug("RegisterRadObject " + rpir.name + " parent " + subRoot.name);
             }
-            rpir.enabled = active;
+            rpir.enabled = true;
             rpir.radiateRadius = radius;
             DamagePlayerInRadius dpir = go.EnsureComponent<DamagePlayerInRadius>();
-            dpir.enabled = active;
+            dpir.enabled = true;
             dpir.damageType = DamageType.Radiation;
             dpir.damageAmount = 1f;
             dpir.updateInterval = 2f;
             dpir.damageRadius = radius;
-
             dpir.tracker = pdt;
             rpir.tracker = pdt;
+            //AddDebug("MakeRad " + go.name + " done ");
+        }
+
+        public static void MakeNotRad(GameObject go)
+        {
+            //AddDebug(" parent  " + go.transform.parent.name);
+            if (!go.name.StartsWith("submarine_locker_"))
+                go = GetEntityRoot(go);
+            
+            //Main.logger.LogMessage("MakeNotRad " + go.name + " parent " + go.transform.parent.name);
+            //AddDebug("MakeNotRad " + go.name );
+
+            PlayerDistanceTracker pdt = go.GetComponent<PlayerDistanceTracker>();
+            if (pdt)
+                pdt.enabled = false;
+
+            RadiatePlayerInRange rpir = go.GetComponent<RadiatePlayerInRange>();
+            if (rpir)
+            {
+                radObjectSub.Remove(rpir);
+                rpir.enabled = false;
+                if (closestRadObject == rpir)
+                    closestRadObject = null;
+                //AddDebug("RegisterRadObject " + rpir.name + " parent " + subRoot.name);
+            }
+            DamagePlayerInRadius dpir = go.GetComponent<DamagePlayerInRadius>();
+            if (dpir)
+                dpir.enabled = false;
         }
 
         public static void RadiatePlayerInv()
@@ -187,21 +229,10 @@ namespace Radical_Radiation
                     Player.main.liveMixin.TakeDamage(damage, Player.main.transform.position, DamageType.Radiation);
                 }
             }
-            else if (radPlayerInRange.Count == 0)
+            else if (closestRadObject == null)
             {
                 //AddDebug("RadiatePlayerInv SetRadiationAmount 0 ");
                 Player.main.SetRadiationAmount(0f);
-            }
-            else
-            { // should need this only if player removes nuclear reactor
-                bool RebuildDict = false;
-                foreach (var keyValuePair in radPlayerInRange)
-                {
-                    if (keyValuePair.Key == null)
-                        RebuildDict = true;
-                }
-                if (RebuildDict)
-                    RebuildRadDict();
             }
         }
 
@@ -216,7 +247,7 @@ namespace Radical_Radiation
                 {
                     Pickupable pickupable = itemInSlot.item;
                     TechType tt = pickupable.GetTechType();
-                    if (pickupable != null && radStuff.Contains(tt) && radRange[tt] > 0)
+                    if (pickupable != null && radRange.ContainsKey(tt) && radRange[tt] > 0)
                     {
                         //AddDebug("Nuclear Reactor has rad");
                         return true;
@@ -275,14 +306,16 @@ namespace Radical_Radiation
             {
                 //TechType techType = __instance.GetDominantResourceType();
                 if (__instance.GetDominantResourceType() == TechType.UraniniteCrystal)
-                    MakeRadioactive(__instance.gameObject, true, radRange[TechType.DrillableUranium]);
+                {
+                    __instance.gameObject.EnsureComponent<RadObject>();
+                }
             }
-            [HarmonyPostfix]
-            [HarmonyPatch("OnDestroy")]
+            //[HarmonyPostfix]
+            //[HarmonyPatch("OnDestroy")]
             public static void OnDestroy_Postfix(Drillable __instance)
             {
                 if (__instance.GetDominantResourceType() == TechType.UraniniteCrystal)
-                    MakeRadioactive(__instance.gameObject, false);
+                    MakeRadCR(__instance.gameObject);
             }
         }
 
@@ -302,7 +335,6 @@ namespace Radical_Radiation
                     //AddDebug("Player.radiationAmount = 0");
                     return false;
                 }
-
                 if (__instance.tracker.distanceToPlayer < __instance.damageRadius)
                 {
                     float damage = __instance.damageAmount * Player.main.radiationAmount * 10f;
@@ -323,16 +355,22 @@ namespace Radical_Radiation
             public static bool Prefix(RadiatePlayerInRange __instance)
             {
                 //AddDebug("RadiatePlayerInRange Radiate " + __instance.name);
-                if (!GameModeUtils.HasRadiation() || (NoDamageConsoleCommand.main && NoDamageConsoleCommand.main.GetNoDamageCheat()))
+                if (!GameModeUtils.HasRadiation() || NoDamageConsoleCommand.main && NoDamageConsoleCommand.main.GetNoDamageCheat())
                 {
                     Player.main.SetRadiationAmount(0f);
                     return false;
                 }
-                if (!__instance.enabled)
+                if (!__instance.isActiveAndEnabled)
                 {
-                    //AddDebug("disabled" );
+                    //AddDebug("RadiatePlayerInRange " + __instance.name + " not ActiveAndEnabled");
+                    //RebuildRadDict();
                     return false;
                 }
+                //if (radPlayerInRange.ContainsKey(__instance))
+                //    AddDebug("RadiatePlayerInRange has " + __instance.name);
+                //else
+                //    AddDebug("RadiatePlayerInRange has no " + __instance.name);
+
                 if (InventoryHasRad())
                 {
                     //AddDebug("InventoryHasRad");
@@ -342,25 +380,23 @@ namespace Radical_Radiation
                 float distanceToPlayer = __instance.tracker.distanceToPlayer;
                 //if (__instance.tracker.maxDistance < 111)
                 //{
-                //AddDebug("distanceToPlayer " + distanceToPlayer + " radiateRadius " + __instance.radiateRadius + " max " + __instance.tracker.maxDistance);
+                //AddDebug(__instance.name + " distanceToPlayer " + distanceToPlayer + " radiateRadius " + __instance.radiateRadius + " max " + __instance.tracker.maxDistance);
                 //}
-                if (__instance.radiateRadius > 0f && distanceToPlayer < __instance.radiateRadius)
+                if (__instance.radiateRadius > 0 && distanceToPlayer < __instance.radiateRadius)
                 {
-                    //AddDebug("tracker.maxDistance " + (int)__instance.tracker.maxDistance);
                     //amount = Mathf.Clamp01(amount);
                     //radPlayerInRange.Remove(__instance);
-                    if (radPlayerInRange.ContainsKey(__instance))
-                        radPlayerInRange[__instance] = distanceToPlayer;
-                    else
-                        radPlayerInRange.Add(__instance, distanceToPlayer);
-
+                    //RegisterRadObject(__instance, distanceToPlayer);
                     //AddDebug("distanceToPlayer " + (int)distanceToPlayer);
                     //AddDebug("Radiate  " + __instance.gameObject.name + " " );
                     //AddDebug("radiateRadius  " + (int)__instance.radiateRadius);
-                    if (IsClosestToPlayer(__instance))
+                    bool closest = closestRadObject == null || closestRadObject && closestRadObject == __instance || closestRadObject.tracker.distanceToPlayer > distanceToPlayer;
+                    //AddDebug(__instance.name + " radiate " + closest);
+                    if (closest )
                     {
-                        //AddDebug("Radiate  " + __instance.gameObject.name + " " + (int)distanceToPlayer);
-                        float amount = Mathf.Clamp01((1f - distanceToPlayer / __instance.radiateRadius));
+                        closestRadObject = __instance;
+                            //AddDebug("Radiate  " + __instance.gameObject.name + " " + (int)distanceToPlayer);
+                        float amount = Mathf.Clamp01(1f - distanceToPlayer / __instance.radiateRadius);
                         float mult = 1f;
 
                         if (Inventory.main.equipment.GetCount(TechType.RadiationSuit) > 0)
@@ -389,15 +425,15 @@ namespace Radical_Radiation
                             }
                             if (Player.main.currentSub)
                             {
-                                Base playerBase = Player.main.currentSub.GetComponent<Base>();
-                                SubControl playerSub = Player.main.currentSub.GetComponent<SubControl>();
-                                if (playerBase)
+                                //Base playerBase = Player.main.currentSub.GetComponent<Base>();
+                                //SubControl playerSub = Player.main.currentSub.GetComponent<SubControl>();
+                                SubRoot playerSub = Player.main.currentSub;
+                                if (playerSub && playerSub.isBase)
                                 {
                                     //AddDebug("Player in Base ");
-                                    Base radBase = __instance.gameObject.FindAncestor<Base>();
-                                    if (radBase)
+                                    if (radObjectSub.ContainsKey(__instance))
                                     {
-                                        if (!playerBase.Equals(radBase))
+                                        if (playerSub != radObjectSub[__instance])
                                             mult = GetBaseProtection();
                                     }
                                     else
@@ -408,18 +444,19 @@ namespace Radical_Radiation
 
                                     }
                                 }
-                                else if(playerSub)
+                                else if(playerSub && playerSub.isCyclops)
                                 {
-                          
-                                    SubControl radSub = __instance.gameObject.FindAncestor<SubControl>();
+                                    //SubControl radSub = __instance.gameObject.FindAncestor<SubControl>();
                                     //AddDebug("player in Sub " + radSub);
                                     //if (__instance.transform.parent)
                                     //    AddDebug("rad parent " + __instance.transform.parent.name);
                                     //if (__instance.transform.parent.parent)
                                     //    AddDebug("rad parent parent " + __instance.transform.parent.parent.name);
 
-                                    if (radSub && radSub.Equals(playerSub))
+                                    if (radObjectSub.ContainsKey(__instance))
                                     {
+                                        if (playerSub != radObjectSub[__instance])
+                                            mult = GetBaseProtection();
                                         //AddDebug("the same sub " );
                                     }
                                     else
@@ -432,19 +469,18 @@ namespace Radical_Radiation
                             else // player outside
                             {
                                 //AddDebug("Player outside ");
-                                Base base_ = __instance.gameObject.FindAncestor<Base>();
-                                SubControl sub = __instance.gameObject.FindAncestor<SubControl>();
-                                if (sub)
+                                if (radObjectSub.ContainsKey(__instance))
                                 {
                                     //AddDebug("rad in sub ");
-                                    SubRoot subRoot = sub.GetComponent<SubRoot>();
-                                    if (subRoot)
+                                    SubRoot subRoot = radObjectSub[__instance];
+                                    if (subRoot.isBase)
+                                    {
+                                        mult = GetBaseProtection();
+                                    }
+                                    else if (subRoot.isCyclops)
+                                    {
                                         mult = GetSubProtection(subRoot);
-                                }
-                                else if (base_)
-                                {
-                                    mult = GetBaseProtection();
-                                    //AddDebug("rad in base " );
+                                    }
                                 }
                             }
                         }
@@ -455,8 +491,11 @@ namespace Radical_Radiation
                 }
                 else // out of range
                 {
+                    if (closestRadObject == __instance)
+                        closestRadObject = null;
+                    //AddDebug(__instance.name + " distanceToPlayer " + distanceToPlayer + " radiateRadius " + __instance.radiateRadius + " max " + __instance.tracker.maxDistance);
                     //AddDebug("distanceToPlayer " + (int)distanceToPlayer);
-                    radPlayerInRange.Remove(__instance);
+                    //UnregisterRadObject(__instance);
                 }
                 return false;
             }
@@ -482,7 +521,7 @@ namespace Radical_Radiation
             [HarmonyPatch( "CalculateDamage")]
             public static bool CalculateDamage_Prefix(DamageSystem __instance, float damage, DamageType type, GameObject target, GameObject dealer, ref float __result)
             {// vanilla method blocks rad damage if player in exosuit
-                if (type == DamageType.Radiation && target.Equals(Player.mainObject))
+                if (type == DamageType.Radiation && target == Player.mainObject)
                 {
                     //AddDebug(target.name + " damage Prefix " + damage);
                     __result = damage;
@@ -497,11 +536,11 @@ namespace Radical_Radiation
         {
             static float radTime = 0f;
 
-            [HarmonyPostfix]
-            [HarmonyPatch("Start")]
+            //[HarmonyPostfix]
+            //[HarmonyPatch("Start")]
             public static void Start_Postfix(Player __instance)
             {
-                ModCompat();
+               
                 //pda = Player.main.GetPDA();
                 //foreach (TechType tt in radStuff)
                 //    Main.Log("radStuff  " + tt);
@@ -512,13 +551,13 @@ namespace Radical_Radiation
             public static void Update_Postfix(Player __instance)
             {
                 //if (Input.GetKey(KeyCode.C))
-                //{
-                //    GameObject target = Player.main.GetComponent<GUIHand>().activeTarget;
-                //    if (target)
-                //    {
-                //        AddDebug("target " + CraftData.GetTechType(target));
-                //    }
-                //}
+                {
+                    //AddDebug("radPlayerInRange " + radPlayerInRange.Count);
+                    //foreach (var item in radPlayerInRange)
+                    //{
+                    //    AddDebug(" " + item.Key.name + " " + item.Value);
+                    //}
+                }
                 //Player.main.oxygenMgr.AddOxygen(115f); 
                 //AddDebug("radRange.Count " + radRange.Count);
                 //AddDebug("reactor Rod Radius " + );
@@ -540,7 +579,7 @@ namespace Radical_Radiation
 
                 if (radiationAmount == 0f && Main.config.radSound)
                 {
-                    if (InventoryHasRad() || radPlayerInRange.Count > 0)
+                    if (closestRadObject != null || InventoryHasRad())
                         radiationAmount = .1f;
                 }
                 if (radiationAmount > 0f)
@@ -563,10 +602,11 @@ namespace Radical_Radiation
                 if (!Player.main)
                     return;
 
-                bool show = radPlayerInRange.Count > 0 || InventoryHasRad();
-                if (Player.main.radiationAmount == 0f && !Main.config.showRadWarning)
+                bool show = closestRadObject || InventoryHasRad();
+                if (Approximately(Player.main.radiationAmount, 0f) && !Main.config.showRadWarning)
                     show = false;
 
+                //AddDebug("uGUI_RadiationWarning " + show);
                 __instance.warning.SetActive(show);
             }
         }
@@ -579,28 +619,22 @@ namespace Radical_Radiation
             public static void Awake_Postfix(Pickupable __instance)
             {
                 TechType techType = __instance.GetTechType();
-
                 //AddDebug(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechType());
-                if (radStuff.Contains(techType))
+                if (radRange.ContainsKey(techType))
                 {
-                    if (__instance.isPickupable) // not in container
-                    {
-                        //AddDebug(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechType());
-                        //Main.Log(__instance.gameObject.name + " Pickupable Awake " + __instance.GetTechName());
-                        MakeRadioactive(__instance.gameObject, true, radRange[techType]);
-                    }
+                    __instance.gameObject.EnsureComponent<RadObject>();
                 }
             }
 
-            [HarmonyPostfix]
-            [HarmonyPatch("Drop", new Type[] { typeof(Vector3), typeof(Vector3), typeof(bool) })]
+            //[HarmonyPostfix]
+            //[HarmonyPatch("Drop", new Type[] { typeof(Vector3), typeof(Vector3), typeof(bool) })]
             public static void Drop_Postfix(Pickupable __instance)
             {
                 TechType techType = __instance.GetTechType();
-                if (radStuff.Contains(techType))
+                if (radRange.ContainsKey(techType))
                 {
                     //Main.Log(" Drop "+ __instance.gameObject.name);
-                    MakeRadioactive(__instance.gameObject, true, radRange[techType]);
+                    //MakeRadioactive(__instance.gameObject, true, false, techType);
                     //AddDebug("Drop " + __instance.gameObject.name);
                 }
             }
@@ -613,46 +647,55 @@ namespace Radical_Radiation
             [HarmonyPatch("NotifyAddItem")]
             public static void NotifyAddItem_Postfix(ItemsContainer __instance, InventoryItem item)
             {
-                //if (__instance.tr.parent.name == "SeamothStorageModule(Clone)")
-                //    AddDebug("NotifyAddItem SeamothStorageModule" );
+                UWE.CoroutineHost.StartCoroutine(ItemAddedToCont(__instance, item));
+            }
+
+            private static IEnumerator<GameObject> ItemAddedToCont(ItemsContainer __instance, InventoryItem item)
+            {
+                while (WaitScreen.IsWaiting)
+                    yield return null;
 
                 TechType techType = item.item.GetTechType();
-                //Main.Log("NotifyAddItem " + techType);
-                //AddDebug("NotifyAddItem " + techType);
-                if (radStuff.Contains(techType) && radRange[techType] > 0)
-                {
-                    GameObject go = __instance.tr.gameObject;
-                    //AddDebug("NotifyAddItem " + techType + " " + __instance.tr.parent.name);
-                    if (item.item.GetComponent<RadiatePlayerInRange>())
-                        MakeRadioactive(item.item.gameObject, false);
+                if (!radRange.ContainsKey(techType) || radRange[techType] <= 0)
+                    yield break;
 
-                    if (seamothStorage)
+                GameObject containerGO = GetEntityRoot(__instance.tr.gameObject);
+                //AddDebug("NotifyAddItem " + techType + " " + containerGO.name);
+                //Main.logger.LogMessage("NotifyAddItem " + techType + " " + __instance.tr.parent.name);
+
+                if (CraftData.GetTechType(containerGO) == radLocker)
+                {
+                    //AddDebug("NotifyAddItem radLocker ");
+                    if (Player.main.GetPDA().isInUse)
+                        radLockerOpen = true;
+
+                    yield break;
+                }
+                //else if (__instance.tr.parent.gameObject.GetComponent("CyNukeReactorMono"))
+                //{
+                //AddDebug("Cyclops Nuke Reactor !!!");
+                //    if (WaitScreen.IsWaiting)
+                //        containersToMakeRad.Add(containerGO, radRange[TechType.BaseNuclearReactor]);
+                //    else
+                //        MakeRadioactive(containerGO, true, radRange[TechType.BaseNuclearReactor]);
+                //}
+                else if (Inventory.main._container != __instance)
+                {
+                    //AddDebug("Inventory.main._container != __instance " );
+                    if (cyclopsCont.ContainsKey(__instance.tr.name) && __instance.tr.parent.parent && __instance.tr.parent.parent.name == "Cyclops-MainPrefab(Clone)")
                     {
-                        MakeRadioactive(seamothStorage, true, radRange[techType]);
-                        return;
-                    }
-                    if (CraftData.GetTechType(go) == radLocker)
-                    {
-                        //AddDebug("NotifyAddItem radLocker ");
-                        if (Player.main.GetPDA().isInUse)
-                            radLockerOpen = true;
-                    }
-                    else if (__instance.tr.parent.gameObject.GetComponent("CyNukeReactorMono"))
-                    {
-                        //AddDebug("Cyclops Nuke Reactor !!!");
-                        MakeRadioactive(go, true, radRange[TechType.BaseNuclearReactor]);
-                    }
-                    else if (Inventory.main._container != __instance)
-                    {
-                        //AddDebug("Inventory.main._container != __instance " );
-                        if (subLocker)
+                        string name = cyclopsCont[__instance.tr.name];
+                        if (name != null)
                         {
-                            MakeRadioactive(subLocker, true, radRange[techType]);
-                            //AddDebug("NotifyAddItem subLocker");
+                            Transform tr = __instance.tr.parent.Find(name);
+                            if (tr)
+                            {
+                                containerGO = tr.gameObject;
+                                //AddDebug("NotifyAddItem sub locker ");
+                            }
                         }
-                        else
-                            MakeRadioactive(go, true, radRange[techType]);
                     }
+                    containerGO.EnsureComponent<RadObject>();
                 }
             }
 
@@ -661,34 +704,39 @@ namespace Radical_Radiation
             public static void NotifyRemoveItem_Postfix(ItemsContainer __instance, InventoryItem item)
             {
                 TechType techType = item.item.GetTechType();
-                if (radStuff.Contains(techType))
+                if (radRange.ContainsKey(techType))
                 {
-                    GameObject go = __instance.tr.gameObject;
+                    GameObject containerGO = GetEntityRoot(__instance.tr.gameObject);
+                    //AddDebug("NotifyRemoveItem " + containerGO.name);
 
-                    if (Inventory.main._container != __instance && CraftData.GetTechType(go) != radLocker)
+                    if (Inventory.main._container != __instance && CraftData.GetTechType(containerGO) != radLocker)
                     {
-                        if (subLocker)
+                        if (cyclopsCont.ContainsKey(__instance.tr.name) && __instance.tr.parent.parent && __instance.tr.parent.parent.name == "Cyclops-MainPrefab(Clone)")
                         {
-                            go = subLocker;
-                            //AddDebug("NotifyRemoveItem subLocker");
+                            string name = cyclopsCont[__instance.tr.name];
+                            if (name != null)
+                            { 
+                                Transform tr = __instance.tr.parent.Find(name);
+                                if (tr)
+                                    containerGO = tr.gameObject;
+                            }
                         }
                         int count = 0;
-                        foreach (TechType tt in radStuff)
-                            count += __instance.GetCount(tt);
+                        foreach (var pair in radRange)
+                            count += __instance.GetCount(pair.Key);
 
                         if (count == 0)
                         {
-                            if (seamothStorage)
+                            //MakeRadioactive(containerGO, false);
+                            RadObject radObject = containerGO.GetComponent<RadObject>();
+                            if (radObject)
                             {
-                                MakeRadioactive(seamothStorage, false);
-                                return;
+                                UnityEngine.Object.Destroy(radObject);
                             }
-                            MakeRadioactive(go, false);
                         }
                     }
                 }
             }
-
         }
 
         [HarmonyPatch(typeof(BaseNuclearReactor))]
@@ -700,18 +748,25 @@ namespace Radical_Radiation
             {
                 //AddDebug("BaseNuclearReactor start");
                 if (ReactorHasRad(__instance))
-                    MakeRadioactive(__instance.gameObject, true, radRange[TechType.NuclearReactor]);
+                {
+                    __instance.gameObject.EnsureComponent<RadObject>();
+                    //radObject.techType = TechType.BaseNuclearReactor;
+                    //MakeRadioactive(__instance.gameObject, false, TechType.BaseNuclearReactor);
+                }
             }
+          
             [HarmonyPostfix]
             [HarmonyPatch("OnEquip")]
             public static void OnEquip_Postfix(BaseNuclearReactor __instance, string slot, InventoryItem item)
             {
                 Pickupable pickupable = item.item;
                 TechType tt = pickupable.GetTechType();
-                if (pickupable && radStuff.Contains(tt) && radRange[tt] > 0)
+                if (pickupable && radRange.ContainsKey(tt) && radRange[tt] > 0)
                 {
                     //AddDebug("Nuclear Reactor Equip rad");
-                    MakeRadioactive(__instance.gameObject, true, radRange[TechType.NuclearReactor]);
+                    __instance.gameObject.EnsureComponent<RadObject>();
+                    //radObject.techType = TechType.BaseNuclearReactor;
+                    //MakeRadioactive(__instance.gameObject, false, TechType.BaseNuclearReactor);
                 }
             }
         }
@@ -726,20 +781,15 @@ namespace Radical_Radiation
                 if (CraftData.GetTechType(__instance.gameObject) == radLocker)
                 {
                     //AddDebug("Rad locker open");
-                    foreach (TechType tt in radStuff)
+                    foreach (var pair in radRange)
                     {
-                        if (__instance.container.Contains(tt))
+                        if (__instance.container.Contains(pair.Key))
                         {
                             //AddDebug("Rad locker has rad");
                             radLockerOpen = true;
                             return;
                         }
                     }
-                }
-                if (Player.main._currentSub && __instance.prefabRoot && Player.main._currentSub.gameObject.Equals(__instance.prefabRoot))
-                {
-                    //AddDebug(" SUB LOCKER ! " );
-                    subLocker = __instance.gameObject;
                 }
             }
 
@@ -753,7 +803,6 @@ namespace Radical_Radiation
                     //MakeRadioactive(__instance.gameObject, false);
                     radLockerOpen = false;
                 }
-                subLocker = null;
             }
         }
 
@@ -779,7 +828,9 @@ namespace Radical_Radiation
                 //AddDebug("CrafterOnDone " + techType);
                 if (techType == TechType.ReactorRod)
                 {
-                    MakeRadioactive(__instance.gameObject, true, radRange[TechType.ReactorRod]);
+                    __instance.gameObject.EnsureComponent<RadObject>();
+                    //radObject.techType = TechType.ReactorRod;
+                    //MakeRadioactive(__instance.gameObject, false, TechType.ReactorRod);
                 }
             }
         }
@@ -791,27 +842,32 @@ namespace Radical_Radiation
             {
                 //AddDebug("NotifyPickup " + __instance.craftingTechType);
                 if (__instance.craftingTechType == TechType.ReactorRod)
-                    MakeRadioactive(__instance.gameObject, false);
+                {
+                    MakeNotRad(__instance.gameObject);
+                    RadObject radObject = __instance.GetComponent<RadObject>();
+                    if (radObject)
+                        UnityEngine.GameObject.Destroy(radObject);
+                }
             }
         }
 
-        [HarmonyPatch(typeof(SeamothStorageInput))]
+        //[HarmonyPatch(typeof(SeamothStorageInput))]
         static class SeamothStorageInput_OpenPDA_patch
         {
-            [HarmonyPostfix]
-            [HarmonyPatch("OpenPDA")]
+            //[HarmonyPostfix]
+            //[HarmonyPatch("OpenPDA")]
             public static void OpenPDAPostfix(SeamothStorageInput __instance)
             {
                 //AddDebug("SeamothStorageInput OpenPDA " + __instance.slotID);
-                seamothStorage = __instance.gameObject;
+                //seamothStorage = __instance.gameObject;
             }
 
-            [HarmonyPostfix]
-            [HarmonyPatch("OnClosePDA")]
+            //[HarmonyPostfix]
+            //[HarmonyPatch("OnClosePDA")]
             public static void OnClosePDAPostfix(SeamothStorageInput __instance)
             {
                 //AddDebug("SeamothStorageInput OnClosePDA " + __instance.slotID);
-                seamothStorage = null;
+                //seamothStorage = null;
             }
         }
 
@@ -823,7 +879,7 @@ namespace Radical_Radiation
                 TechTag techTag = __instance.gameObject.FindAncestor<TechTag>();
                 if (techTag)
                 {
-                    if (techTag.type.ToString() == "RadRadLocker")
+                    if (techTag.type.ToString() == "RadLocker")
                     {
                         //AddDebug("RadRadLocker uGUI_SignInput Awake");
                         __instance.stringDefaultLabel = Main.config.lockerName;
@@ -867,7 +923,7 @@ namespace Radical_Radiation
                 RadiatePlayerInRange radiatePlayerInRange = __instance.GetComponent<RadiatePlayerInRange>();
                 if (radiatePlayerInRange)
                 {
-                    if (radPlayerInRange.ContainsKey(radiatePlayerInRange))
+                    //if (radPlayerInRange.ContainsKey(radiatePlayerInRange))
                     {
                         //AddDebug("Pickupable Pickup " + __instance.isPickupable);
                         //Main.Log(" Pickupable Pickup " + __instance.isPickupable);
@@ -920,5 +976,53 @@ namespace Radical_Radiation
             }
         }
 
+        [HarmonyPatch(typeof(WaitScreen), "Remove")]
+        class WaitScreen_Remove_Patch
+        {
+            public static void Postfix(WaitScreen.IWaitItem item)
+            { // __instance is null !
+                if (WaitScreen.main.items.Count == 0)
+                {
+                    UWE.CoroutineHost.StartCoroutine(LoadedGameSetup());
+                    //LoadedGameSetup();
+                    //AddDebug("loaded game world");
+                }
+            }
+        }
+
+        //[HarmonyPatch(typeof(Constructable), "DeconstructAsync")]
+        class Constructable_DeconstructAsync_Patch
+        {
+            public static void Postfix(Constructable __instance)
+            { 
+                if (__instance.constructedAmount == 0 && __instance.techType == TechType.BaseNuclearReactor)
+                {
+                    //RadiatePlayerInRange rpir = __instance.GetComponent<RadiatePlayerInRange>();
+                    //if (rpir && radPlayerInRange.ContainsKey(rpir))
+                    {
+                        //AddDebug("DeconstructAsync " + __instance.techType  + " " + __instance.constructedAmount);
+                        //MakeRadioactive(__instance.gameObject, false);
+                        //if (RadDictNeedsRebuild())
+                            //RebuildRadDict();
+                    }
+                }
+            }
+        }
+
+        public static IEnumerator<GameObject> LoadedGameSetup()
+        {
+            while (WaitScreen.IsWaiting)
+                yield return null;
+            
+            //AddDebug("LoadedGameSetup IsWaiting " + WaitScreen.IsWaiting);
+            ModCompat();
+            //foreach (var go in goToMakeRad)
+            {
+                //MakeRadioactive(go);
+                //go.EnsureComponent<RadObject>();
+            }
+            //goToMakeRad = new HashSet<GameObject>();
+        }
+        
     }
 }

@@ -32,14 +32,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp-firstpass_publicized">
-      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\Assembly-CSharp-firstpass_publicized.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp_publicized">
-      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\Assembly-CSharp_publicized.dll</HintPath>
-    </Reference>
     <Reference Include="0Harmony">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\BepInEx\core\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass_publicized, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\dll lib\Assembly-CSharp-firstpass_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp_publicized, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\dll lib\Assembly-CSharp_publicized.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\BepInEx\core\BepInEx.dll</HintPath>
@@ -47,16 +49,20 @@
     <Reference Include="FMODUnity">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\FMODUnity.dll</HintPath>
     </Reference>
+    <Reference Include="Nautilus">
+      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\BepInEx\plugins\Nautilus\Nautilus.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="Unity.Addressables, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Games\STEAM\SteamApps\common\Subnautica\Subnautica_Data\Managed\Unity.Addressables.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="SMLHelper">
-      <HintPath>C:\GAMES\Steam\steamapps\common\Subnautica\QMods\SMLHelper\SMLHelper.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -68,9 +74,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CyclopsRadModule.cs" />
-    <Compile Include="SeamothRadModule.cs" />
+    <Compile Include="RadObject.cs" />
     <Compile Include="RadLocker.cs" />
+    <Compile Include="RadModule.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Testing.cs" />
   </ItemGroup>

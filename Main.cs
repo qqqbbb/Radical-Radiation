@@ -1,11 +1,17 @@
 ﻿
 using HarmonyLib;
 using System;
+using System.IO;
 using System.Reflection;
-using SMLHelper.V2.Handlers;
-using SMLHelper.V2.Crafting;
 using System.Collections.Generic;
 using BepInEx;
+using Nautilus.Handlers;
+using Nautilus.Assets;
+using Nautilus.Utility;
+using Nautilus.Assets.PrefabTemplates;
+using Nautilus.Assets.Gadgets;
+using BepInEx.Logging;
+using UnityEngine;
 
 namespace Radical_Radiation
 {
@@ -15,9 +21,10 @@ namespace Radical_Radiation
         private const string
             MODNAME = "Radical radiation",
             GUID = "qqqbbb.subnautica.radicalRadiation",
-            VERSION = "2.0";
+            VERSION = "3.0.0";
 
         public static Config config { get; } = OptionsPanelHandler.RegisterModOptions<Config>();
+        public static ManualLogSource logger;
 
 
         [HarmonyPatch(typeof(IngameMenu), "QuitGameAsync")]
@@ -28,11 +35,8 @@ namespace Radical_Radiation
                 if (!quitToDesktop)
                 {
                     RadPatches.radLockerOpen = false;
-                    RadPatches.subLocker = null;
-                    RadPatches.seamothStorage = null;
-                    RadPatches.radPlayerInRange = new Dictionary<RadiatePlayerInRange, float>();
+                    RadPatches.closestRadObject = null;
                 }
-   
             }
         }
 
@@ -41,12 +45,12 @@ namespace Radical_Radiation
             config.Load();
             Assembly assembly = Assembly.GetExecutingAssembly();
             new Harmony($"qqqbbb_{assembly.GetName().Name}").PatchAll(assembly);
-            //modLoaded = true;
+            logger = Logger;
             RadPatches.UpdateRadiusDict();
-            new RadLocker().Patch();
-            new SeamothRadModule().Patch();
-            new CyclopsRadModule().Patch();
-            TechTypeExtensions.FromString("RadRadLocker", out RadPatches.radLocker, false);
+            RadModule.RegisterSeamothRadModule();
+            RadModule.RegisterCyclopsRadModule();
+            RadLocker.RegisterRadLocker();
+            TechTypeExtensions.FromString("RadLocker", out RadPatches.radLocker, false);
             TechTypeExtensions.FromString("SeamothRadModule", out RadPatches.radModuleSeamoth, false);
             TechTypeExtensions.FromString("CyclopsRadModule", out RadPatches.radModuleCyclops, false);
                 //Log("RadRadLocker " + RadPatches.radLocker.ToString());
